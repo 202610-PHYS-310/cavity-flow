@@ -17,7 +17,7 @@ There is no equation that says "dp/dt = ...". Pressure has no evolution of its o
 
     d2p/dx2 + d2p/dy2 = b
 
-where b depends only on the velocities (step 5). So every time step has two jobs: find the pressure that goes with the current velocities, then use it to move the velocities forward.
+where b depends only on the velocities (step 6). So every time step has two jobs: find the pressure that goes with the current velocities, then use it to move the velocities forward.
 
 ## Step 2: the grid and the arrays
 
@@ -86,7 +86,26 @@ cc.source(b, u, v, dx, dt, 1, n - 1)
 
     b = rho ( (du/dx + dv/dy) / dt - (du/dx)^2 - 2 (du/dy)(dv/dx) - (dv/dy)^2 )
 
-with every derivative a centred difference. The first term deserves a look. If the velocities were exactly divergence-free, du/dx + dv/dy would be zero and the term would vanish. They never are, quite: small errors build up each step. Dividing that error by dt and putting it into the pressure makes the next velocity update push the divergence back toward zero. It is a correction, and it is why the flow stays close to incompressible without ever enforcing it exactly.
+with every derivative a centred difference.
+
+**Think of b as a charge density.** The equation d2p/dx2 + d2p/dy2 = b has the form of Poisson's equation in electrostatics, with p playing the potential and b the charge, apart from a sign. Where b is negative, p has a local maximum; where b is positive, p has a local minimum. So b marks the places where the flow needs a pressure peak or a pressure hole, and solving the Poisson equation spreads that need over the whole box. The two parts of b do different jobs.
+
+**The velocity-gradient part is the physics.** Split the velocity gradient into its symmetric part, the strain (the fluid being stretched or squashed), and its antisymmetric part, the rotation. A line of algebra shows that
+
+    (du/dx)^2 + 2 (du/dy)(dv/dx) + (dv/dy)^2 = S:S - w^2 / 2
+
+where S:S is the sum of the squares of the strain-rate components and w = dv/dx - du/dy is the vorticity. Ignoring the divergence term for a moment, the pressure equation becomes
+
+    d2p/dx2 + d2p/dy2 = rho ( w^2 / 2 - S:S )
+
+- **Where rotation wins**, in the core of a vortex, the right side is positive and the pressure has a minimum. That is the centripetal force: fluid going round in a circle needs a net push toward the centre, and a pressure low supplies it. It is why the eye of a hurricane is a low.
+- **Where strain wins**, at a stagnation point where the flow runs into a wall and has to turn, the right side is negative and the pressure has a maximum. The fluid arriving at the wall must be slowed and turned aside, and a pressure high does it.
+
+The cavity shows both. The lid drives fluid into the top right corner, and that is where the pressure peaks. In the top left corner the lid pulls fluid away, and the pressure drops.
+
+**The divergence part is a correction.** If the velocities were exactly divergence-free, du/dx + dv/dy would be zero and this term would vanish. They never are, quite: small errors build up each step. Suppose fluid is leaving some point, so the divergence there is positive. Then b is pushed up, which makes a pressure low at that point, and in the next velocity update the pressure gradient accelerates fluid back toward it, cancelling the outflow. The 1/dt asks for the error to be undone in a single step. This is why the flow stays close to incompressible without ever enforcing it exactly.
+
+**Why pressure needs no time step.** Poisson's equation has no propagation speed: change b anywhere and p changes everywhere at once. That is what incompressible means. The fluid behaves as if sound travelled infinitely fast, so pressure is not something that evolves; it is whatever it must be, at each instant, to keep the flow divergence-free.
 
 b is computed once per time step, because the velocities do not change while the pressure is being found.
 
