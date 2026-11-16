@@ -86,28 +86,43 @@ cc.source(b, u, v, dx, dt, 1, n - 1)
 
     b = rho ( (du/dx + dv/dy) / dt - (du/dx)^2 - 2 (du/dy)(dv/dx) - (dv/dy)^2 )
 
-with every derivative a centred difference.
+with every derivative a centred difference. b is computed once per time step, because the velocities do not change while the pressure is being found.
 
-**Think of b as a charge density.** The equation d2p/dx2 + d2p/dy2 = b has the form of Poisson's equation in electrostatics, with p playing the potential and b the charge, apart from a sign. Where b is negative, p has a local maximum; where b is positive, p has a local minimum. So b marks the places where the flow needs a pressure peak or a pressure hole, and solving the Poisson equation spreads that need over the whole box. The two parts of b do different jobs.
+**Think of b as a charge density.** The equation d2p/dx2 + d2p/dy2 = b has the form of Poisson's equation in electrostatics, with p playing the potential and b the charge, apart from a sign. Where b is negative, p has a local maximum; where b is positive, p has a local minimum. So b marks the places where the flow needs a pressure peak or a pressure hole, and solving the Poisson equation spreads that need over the whole box. b has two parts, and they do different jobs.
 
-**The velocity-gradient part is the physics.** Split the velocity gradient into its symmetric part, the strain (the fluid being stretched or squashed), and its antisymmetric part, the rotation. A line of algebra shows that
+**The physics part.** The velocity-gradient terms describe what the flow is doing. Split the velocity gradient into its symmetric part, the strain (the fluid being stretched or squashed), and its antisymmetric part, the rotation. A line of algebra shows that
 
     (du/dx)^2 + 2 (du/dy)(dv/dx) + (dv/dy)^2 = S:S - w^2 / 2
 
-where S:S is the sum of the squares of the strain-rate components and w = dv/dx - du/dy is the vorticity. Ignoring the divergence term for a moment, the pressure equation becomes
+where S:S is the sum of the squares of the strain-rate components and w = dv/dx - du/dy is the vorticity. So the physics part of b is rho (w^2/2 - S:S), and for a flow that is exactly incompressible it is the whole of b:
 
     d2p/dx2 + d2p/dy2 = rho ( w^2 / 2 - S:S )
 
 - **Where rotation wins**, in the core of a vortex, the right side is positive and the pressure has a minimum. That is the centripetal force: fluid going round in a circle needs a net push toward the centre, and a pressure low supplies it. It is why the eye of a hurricane is a low.
-- **Where strain wins**, at a stagnation point where the flow runs into a wall and has to turn, the right side is negative and the pressure has a maximum. The fluid arriving at the wall must be slowed and turned aside, and a pressure high does it.
+- **Where strain wins**, where the flow runs into a wall and has to turn, the right side is negative and the pressure has a maximum. The fluid arriving at the wall must be slowed and turned aside, and a pressure high does it.
 
-The cavity shows both. The lid drives fluid into the top right corner, and that is where the pressure peaks. In the top left corner the lid pulls fluid away, and the pressure drops.
+In a pure shear, such as the thin layer just under the lid where u changes quickly with y, the two cancel exactly. That is why the rotation and strain terms are each several times bigger than their sum.
 
-**The divergence part is a correction.** If the velocities were exactly divergence-free, du/dx + dv/dy would be zero and this term would vanish. They never are, quite: small errors build up each step. Suppose fluid is leaving some point, so the divergence there is positive. Then b is pushed up, which makes a pressure low at that point, and in the next velocity update the pressure gradient accelerates fluid back toward it, cancelling the outflow. The 1/dt asks for the error to be undone in a single step. This is why the flow stays close to incompressible without ever enforcing it exactly.
+**The divergence part.** The other term, rho (du/dx + dv/dy) / dt, is feedback. If the velocities were exactly divergence-free it would vanish. Suppose instead that fluid is leaving some point, so the divergence there is positive. Then b is pushed up, which makes a pressure low at that point, and in the velocity update the pressure gradient accelerates fluid back toward it, cancelling the outflow. Where fluid is piling up, the opposite happens. The 1/dt asks for the error to be undone in a single step. The physics part is a prediction of the pressure the flow needs; the divergence part measures what the last step actually did and corrects for whatever the prediction missed.
 
-**Why pressure needs no time step.** Poisson's equation has no propagation speed: change b anywhere and p changes everywhere at once. That is what incompressible means. The fluid behaves as if sound travelled infinitely fast, so pressure is not something that evolves; it is whatever it must be, at each instant, to keep the flow divergence-free.
+**Look at b.** `plot_source.py` draws b, its two parts, and the pressure each part makes on its own:
 
-b is computed once per time step, because the velocities do not change while the pressure is being found.
+    python plot_source.py cavity-serial-41.npz
+
+The Poisson equation is linear, so the pressure from the divergence part plus the pressure from the physics part is the run's pressure. For Barba's run the picture is not the one the physics alone suggests:
+
+| | rms of the source | pressure it makes |
+|---|---|---|
+| divergence part | about 100 | -2.8 to +3.0 |
+| physics part | about 0.9 | -0.04 to +0.05 |
+
+The divergence part is most of b, and it is concentrated in the top few rows, in bands that alternate in sign along the lid. Both corner pressures, the high at the top right and the low at the top left, come from it. The largest divergence in the box is about 2.3 per second, and the 1/dt = 1000 turns that into a source of thousands.
+
+The reason is the lid. At its two ends the velocity jumps from 1 to 0 between neighbouring points, and the real solution is singular there: the velocity gradients, and the pressure, have no finite value at those corners. No grid resolves that, and the divergence is largest in the cells beside them. Refining the grid makes it worse, not better (the largest divergence is about 0.4 at 21 by 21, 2.3 at 41 by 41 and 9 at 81 by 81). Nor is it a sign that the pressure solve has not converged: 500 or 5000 sweeps per step instead of 50 give the same answer.
+
+Away from the corners the physics part does its job. On its own it makes a low in the middle of the vortex, about -0.04, which is most of the pressure there, and highs at both top corners, where the lid drives fluid into one wall and pulls it away from the other, and in both places the flow has to turn. The divergence part overrules it only at the top left, where it makes a low about eighty times bigger.
+
+**Why pressure needs no time step.** Poisson's equation has no propagation speed: change b anywhere and p changes everywhere at once. That is what incompressible means. The fluid behaves as if sound travelled infinitely fast, so pressure is not something that evolves; it is whatever it must be, at each instant, to keep the flow divergence-free, as nearly as the grid allows.
 
 ## Step 7: the pressure, by Jacobi iteration
 
@@ -180,10 +195,10 @@ At the end it saves u, v and p to `cavity-serial-<n>.npz`. Draw them with
 
     python plot_cavity.py cavity-serial-41.npz
 
-and compare with the last figure in Barba's Step 11 notebook. You should see the vortex centred in the upper half of the box, near x = 1, a high pressure in the top right corner where the lid drives fluid into the wall, and low pressure in the top left where it pulls fluid away.
+and compare with the last figure in Barba's Step 11 notebook. You should see the vortex centred in the upper half of the box, near x = 1, a high pressure in the top right corner, where the lid drives fluid into the wall, and a low pressure in the top left, where it pulls fluid away. Step 6 shows that both corner pressures come mostly from the divergence part of b; `plot_source.py` draws where each part of the pressure comes from.
 
 ## Things to check yourself
 
 - Run 41 by 41 for 700 steps, then 1400. Has the flow stopped changing, or is Barba's 700-step picture still on its way somewhere?
-- Print the largest value of |du/dx + dv/dy| at the end of a run. How close to incompressible is the answer?
+- Print the largest value of |du/dx + dv/dy| at the end of a run, and the largest value more than a few cells from the lid. How close to incompressible is the answer, and where is it worst?
 - Set `NU = 0.01` and run again. Does it stay stable? If not, which term is to blame?

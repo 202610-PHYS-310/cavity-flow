@@ -13,6 +13,7 @@ This is Barba's Step 11, flow in a box with a moving lid, written twice: once on
 | `cavity_mpi.py` | The same, with the box cut into horizontal strips, one per rank. Prints the time per step and the share spent in halo exchanges. |
 | `compare.py` | Checks an MPI run against the serial run, point by point. |
 | `plot_cavity.py` | Draws a saved run: pressure contours, velocity arrows and streamlines. |
+| `plot_source.py` | Draws the source term of the pressure equation, its two parts, and the pressure each part makes on its own. Serial walkthrough Step 6 explains it. |
 | `Serial-Walkthrough.md` | The physics and numerics of `cavity_serial.py`, one step at a time. Read it first. |
 | `MPI-Walkthrough.md` | How `cavity_mpi.py` is built from the serial code, one step at a time. |
 | `jacobi_mpi.py` | Laplace's equation split across ranks: the simpler code `cavity_mpi.py` is modelled on. |
@@ -34,9 +35,10 @@ Then run the codes, also from this folder:
 
 Both scripts take the grid size and the number of time steps, for example `cavity_serial.py 1025 20`. With no arguments they run Barba's case, 41 by 41 for 700 steps.
 
-`plot_cavity.py` needs Matplotlib, which the image does not have, so run it with your own Python:
+`plot_cavity.py` and `plot_source.py` need Matplotlib, which the image does not have, so run them with your own Python:
 
     python plot_cavity.py cavity-serial-41.npz
+    python plot_source.py cavity-serial-41.npz
 
 ## Is the parallel answer right?
 
