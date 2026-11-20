@@ -19,6 +19,7 @@ This is Barba's Step 11, flow in a box with a moving lid, written twice: once on
 | `jacobi_mpi.py` | Laplace's equation split across ranks: the simpler code `cavity_mpi.py` is modelled on. |
 | `Dockerfile` | Python, NumPy, OpenMPI and mpi4py, so everyone has the same setup. |
 | `corner_core.py`, `corner_serial.py`, `plot_corner.py` | A second problem with the same arithmetic: flow through an L-shaped channel, around a corner. `Corner-Walkthrough.md` explains it. |
+| `corner_mpi.py` | The corner split across MPI ranks. Check it with `python compare.py 41 4 corner`. |
 
 The physics is Barba's: a 2 by 2 box, lid speed 1, density 1, viscosity 0.1, and a fixed 50 pressure sweeps per time step. Her grid is 41 by 41 with a time step of 0.001. On a finer grid the time step has to shrink to stay stable, and `cavity_core.grid()` does that for you.
 

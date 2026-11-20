@@ -72,17 +72,21 @@ def pressure_bc(p, m):
     p[-1, m + 1:] = 0              # outflow
 
 
-def velocity(u, v, un, vn, p, dx, dt):
-    """One time step of the momentum equations on the whole interior.
+def velocity(u, v, un, vn, p, dx, dt, a=1, z=None):
+    """One time step of the momentum equations, rows a..z-1 (the whole
+    interior unless told otherwise; corner_mpi.py passes a rank's own rows).
 
     Same as cavity_core.velocity, except for the convection terms. Barba's code
     always takes the backward difference, which is upwind only where the
     velocity is positive. Here the flow turns, and the corner makes regions
     where it runs backwards, so each term takes the difference on the side the
     fluid is coming from."""
-    c = (slice(1, -1), slice(1, -1))
-    e, w = (slice(1, -1), slice(2, None)), (slice(1, -1), slice(None, -2))
-    nn, s = (slice(2, None), slice(1, -1)), (slice(None, -2), slice(1, -1))
+    if z is None:
+        z = u.shape[0] - 1
+    r, up, dn = slice(a, z), slice(a + 1, z + 1), slice(a - 1, z - 1)
+    c = (r, slice(1, -1))
+    e, w = (r, slice(2, None)), (r, slice(None, -2))
+    nn, s = (up, slice(1, -1)), (dn, slice(1, -1))
 
     def convect(f):
         dfdx = np.where(un[c] > 0, f[c] - f[w], f[e] - f[c]) / dx
