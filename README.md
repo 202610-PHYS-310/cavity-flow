@@ -41,6 +41,17 @@ Both scripts take the grid size and the number of time steps, for example `cavit
     python plot_cavity.py cavity-serial-41.npz
     python plot_source.py cavity-serial-41.npz
 
+### Or open it in a container with VS Code
+
+With Docker running and the Dev Containers extension installed in VS Code, open this folder and choose "Reopen in Container" (from the prompt, or the command palette). The first time takes a few minutes while it builds the same image as above, and adds Matplotlib. After that, the VS Code terminal is inside the container, so the commands run directly:
+
+    python cavity_serial.py
+    mpirun -n 4 python cavity_mpi.py
+    python compare.py 41 4
+    python plot_cavity.py cavity-serial-41.npz
+
+The plots are saved as PNG files in this folder; open them from the VS Code file list.
+
 ## Is the parallel answer right?
 
 Yes, exactly. `compare.py` finds the MPI fields identical to the serial ones, with a largest difference of zero, not just small, for every case below. That works because both codes do the same operations on every point, and a Jacobi sweep reads only the old values, so the order the points are visited in does not matter.

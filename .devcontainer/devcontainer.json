@@ -1,0 +1,29 @@
+{
+  // VS Code: "Dev Containers: Reopen in Container". Builds the same image as the
+  // Dockerfile in the repo root, so the codes run exactly as they do with docker run.
+  "name": "PHYS-310 cavity flow",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/work,type=bind",
+  "workspaceFolder": "/work",
+  "remoteUser": "mpi",
+  // The image leaves out Matplotlib (it also runs on the cluster); the plots need it here.
+  "postCreateCommand": "pip install --user --no-cache-dir matplotlib",
+  "remoteEnv": {
+    "PATH": "/home/mpi/.local/bin:${containerEnv:PATH}",
+    "MPLBACKEND": "Agg"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
+    }
+  }
+}
